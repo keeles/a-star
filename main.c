@@ -37,8 +37,6 @@ int grid[10][10] = {
 };
 
 void print_grid() {
-  printf(" ============== map =============\n");
-  printf("\n");
   for (int i = 0; i < 10; i++) {
     printf("  ");
     for (int j = 0; j < 10; j++) {
@@ -47,6 +45,11 @@ void print_grid() {
       }
 
       printf("[");
+      if (grid[i][j] == 2) {
+        printf("*");
+        continue;
+      }
+
       if (grid[i][j] == 3) {
         printf("S");
         continue;
@@ -68,8 +71,6 @@ void print_grid() {
       }
     }
   }
-  printf("\n");
-  printf(" ================================\n\n");
 }
 
 void reconstruct_path(cell_t *goal) {
@@ -77,10 +78,17 @@ void reconstruct_path(cell_t *goal) {
   int steps_back = 1;
 
   do {
-    printf("Step back %d: x: %d y: %d\n", steps_back, prev->x, prev->y);
+    grid[prev->y][prev->x] = 2;
     prev = prev->parent;
     steps_back++;
-  } while (prev != NULL);
+  } while (prev->parent != NULL);
+
+  printf("\n");
+  printf(" ============== path =============\n");
+  printf("\n");
+  print_grid();
+  printf("\n");
+  printf(" ================================\n\n");
 }
 
 int isEmpty(cell_q_t *p) { return p->num_entries == 0; }
@@ -147,13 +155,16 @@ int main() {
   grid[GOAL_Y][GOAL_X] = 4;
 
   // print grid for visualization
+  printf(" ============== map =============\n");
+  printf("\n");
   print_grid();
+  printf("\n");
+  printf(" ================================\n\n");
 
   cell_t *start = all_cells[START_Y][START_X];
   start->g = 0;
   start->f = start->h;
   start->in_open = 1;
-  // what about index 0?
   open_set.items[0] = start;
   open_set.num_entries++;
 
