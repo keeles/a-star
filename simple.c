@@ -10,8 +10,6 @@ typedef struct Cell {
   int f;
   int in_open;
   int in_closed;
-  int is_goal;
-  int is_start;
 } cell_t;
 
 const int START_Y = 2;
@@ -21,17 +19,16 @@ const int GOAL_Y = 5;
 const int GOAL_X = 8;
 
 typedef struct Cell_Queue {
-  cell_t **items;
+  cell_t *items[100];
   int num_entries;
-  int capacity;
 } cell_q_t;
 
 int grid[10][10] = {
     {1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, // adding comment here to keep formatting
     {1, 0, 0, 0, 0, 0, 0, 0, 0, 1}, // adding comment here to keep formatting
-    {1, 0, 0, 1, 1, 1, 1, 1, 1, 1}, // adding comment here to keep formatting
-    {1, 0, 0, 1, 0, 0, 1, 0, 0, 1}, // adding comment here to keep formatting
-    {1, 0, 0, 1, 0, 0, 1, 0, 0, 1}, // adding comment here to keep formatting
+    {1, 0, 0, 0, 0, 0, 1, 0, 0, 1}, // adding comment here to keep formatting
+    {1, 0, 0, 0, 0, 0, 1, 0, 0, 1}, // adding comment here to keep formatting
+    {1, 0, 0, 0, 0, 0, 1, 0, 0, 1}, // adding comment here to keep formatting
     {1, 0, 0, 0, 0, 0, 1, 0, 0, 1}, // adding comment here to keep formatting
     {1, 0, 0, 0, 0, 0, 1, 0, 0, 1}, // adding comment here to keep formatting
     {1, 0, 0, 0, 0, 0, 1, 0, 0, 1}, // adding comment here to keep formatting
@@ -81,7 +78,6 @@ void reconstruct_path(cell_t *goal) {
   int steps_back = 1;
 
   do {
-    // this is just to draw map
     grid[prev->y][prev->x] = 2;
     prev = prev->parent;
     steps_back++;
@@ -99,9 +95,7 @@ int isEmpty(cell_q_t *p) { return p->num_entries == 0; }
 
 int heuristic(int x1, int y1, int x2, int y2) { return abs(x1 - x2) + abs(y1 - y2); }
 
-int get_index(int x, int y, int width) { return y * width + x; }
-
-cell_t build_cell(cell_t *parent, int x, int y, int is_goal, int is_start) {
+cell_t build_cell(cell_t *parent, int x, int y) {
   cell_t cell = {.x = x,
                  .y = y,
                  // start with expensive value
@@ -110,29 +104,22 @@ cell_t build_cell(cell_t *parent, int x, int y, int is_goal, int is_start) {
                  .f = 0 + heuristic(x, y, GOAL_X, GOAL_Y),
                  .parent = parent,
                  .in_open = 0,
-                 .in_closed = 0,
-                 .is_goal = is_goal,
-                 .is_start = is_start};
+                 .in_closed = 0};
   return cell;
 }
 
-void try_neighbour(cell_q_t *open_set, cell_t *cells, cell_t *current, int width, int height,
-                   int nx, int ny) {
-  if (nx < 0 || nx == width || ny < 0 || ny == height || grid[ny][nx] == 1) {
+void try_neighbour(cell_q_t *open_set, cell_t *all_cells[10][10], cell_t *current, int nx, int ny) {
+  if (nx == 10 || ny == 10 || grid[ny][nx] == 1) {
     return;
   }
 
-  cell_t *n = &cells[ny * width + nx];
+  cell_t *n = all_cells[ny][nx];
   if (n->in_closed) {
     return;
   }
 
-  // tentative_g = current->g + cost_of_moving(current, neighbor)
-  // in my current 4 directional movement, cost_of_moving always is 1
-  int tentative_g = current->g + 1;
-
-  if (n->in_open == 0 || tentative_g < n->g) {
-    n->g = tentative_g;
+  if (n->in_open == 0 || current->g < n->g) {
+    n->g = 0;
     n->f = n->g + n->h;
     n->parent = current;
 
@@ -148,28 +135,17 @@ void try_neighbour(cell_q_t *open_set, cell_t *cells, cell_t *current, int width
   }
 }
 
-int main() {
-  int width = 10;
-  int height = 10;
-
-  cell_t *cells = malloc(width * height * sizeof(cell_t));
-  cell_q_t open_set = {.num_entries = 0,
-                       .capacity = width * height,
-                       .items = malloc(sizeof(cell_t *) * width * height)};
-
-  cell_q_t closed_set = {.num_entries = 0,
-                         .capacity = width * height,
-                         .items = malloc(sizeof(cell_t *) * width * height)};
+int simple() {
+  int set_index = 0;
+  cell_q_t open_set = {.num_entries = 0, .items = {}};
+  cell_q_t closed_set = {.num_entries = 0, .items = {}};
+  cell_t *all_cells[10][10] = {};
+  cell_t cells[10][10] = {};
 
   for (int y = 0; y < 10; y++) {
     for (int x = 0; x < 10; x++) {
-      if (x == GOAL_X && y == GOAL_Y) {
-        cells[y * width + x] = build_cell(NULL, x, y, 1, 0);
-      } else if (x == START_X && y == START_Y) {
-        cells[y * width + x] = build_cell(NULL, x, y, 0, 1);
-      } else {
-        cells[y * width + x] = build_cell(NULL, x, y, 0, 0);
-      }
+      cells[y][x] = build_cell(NULL, x, y);
+      all_cells[y][x] = &cells[y][x];
     }
   }
 
@@ -185,7 +161,7 @@ int main() {
   printf("\n");
   printf(" ================================\n\n");
 
-  cell_t *start = &cells[START_Y * width + START_X];
+  cell_t *start = all_cells[START_Y][START_X];
   start->g = 0;
   start->f = start->h;
   start->in_open = 1;
@@ -208,21 +184,18 @@ int main() {
     current->in_closed = 1;
 
     // current is goal
-    if (cells[current->y * width + current->x].is_goal) {
+    if (grid[current->y][current->x] == 4) {
       // done reconstruct path
       reconstruct_path(current);
       break;
     }
 
     // try all neighbours
-    try_neighbour(&open_set, cells, current, width, height, current->x + 1, current->y);
-    try_neighbour(&open_set, cells, current, width, height, current->x - 1, current->y);
-    try_neighbour(&open_set, cells, current, width, height, current->x, current->y + 1);
-    try_neighbour(&open_set, cells, current, width, height, current->x, current->y - 1);
+    try_neighbour(&open_set, all_cells, current, current->x + 1, current->y);
+    try_neighbour(&open_set, all_cells, current, current->x - 1, current->y);
+    try_neighbour(&open_set, all_cells, current, current->x, current->y + 1);
+    try_neighbour(&open_set, all_cells, current, current->x, current->y - 1);
   }
 
-  free(cells);
-  free(open_set.items);
-  free(closed_set.items);
   return 0;
 }
