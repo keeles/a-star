@@ -99,6 +99,22 @@ int isEmpty(cell_q_t *p) { return p->num_entries == 0; }
 
 int heuristic(int x1, int y1, int x2, int y2) { return abs(x1 - x2) + abs(y1 - y2); }
 
+int euclidean_d(int x1, int y1, int x2, int y2) {
+  int dx = abs(x1 - x2);
+  int dy = abs(y1 - y2);
+  return (dx * dx) + (dy * dy);
+}
+
+int chebyshev_d(int x1, int y1, int x2, int y2) {
+  int dx = abs(x1 - x2);
+  int dy = abs(y1 - y2);
+  if (dx > dy) {
+    return dx;
+  }
+
+  return dy;
+}
+
 int get_index(int x, int y, int width) { return y * width + x; }
 
 cell_t build_cell(cell_t *parent, int x, int y, int is_goal, int is_start) {
@@ -106,8 +122,15 @@ cell_t build_cell(cell_t *parent, int x, int y, int is_goal, int is_start) {
                  .y = y,
                  // start with expensive value
                  .g = 100,
-                 .h = heuristic(x, y, GOAL_X, GOAL_Y),
-                 .f = 0 + heuristic(x, y, GOAL_X, GOAL_Y),
+                 // manhattan
+                 // .h = heuristic(x, y, GOAL_X, GOAL_Y),
+                 // .f = 0 + heuristic(x, y, GOAL_X, GOAL_Y),
+                 // euclidean
+                 // .h = euclidean_d(x, y, GOAL_X, GOAL_Y),
+                 // .f = 0 + euclidean_d(x, y, GOAL_X, GOAL_Y),
+                 // chebyshev
+                 .h = chebyshev_d(x, y, GOAL_X, GOAL_Y),
+                 .f = 0 + chebyshev_d(x, y, GOAL_X, GOAL_Y),
                  .parent = parent,
                  .in_open = 0,
                  .in_closed = 0,
@@ -216,7 +239,11 @@ int main() {
 
     // try all neighbours
     try_neighbour(&open_set, cells, current, width, height, current->x + 1, current->y);
+    try_neighbour(&open_set, cells, current, width, height, current->x + 1, current->y + 1);
+    try_neighbour(&open_set, cells, current, width, height, current->x + 1, current->y + -1);
     try_neighbour(&open_set, cells, current, width, height, current->x - 1, current->y);
+    try_neighbour(&open_set, cells, current, width, height, current->x - 1, current->y + 1);
+    try_neighbour(&open_set, cells, current, width, height, current->x - 1, current->y - 1);
     try_neighbour(&open_set, cells, current, width, height, current->x, current->y + 1);
     try_neighbour(&open_set, cells, current, width, height, current->x, current->y - 1);
   }
